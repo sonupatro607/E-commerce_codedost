@@ -2,7 +2,6 @@ import { useSelector, useDispatch } from "react-redux";
 import {
   fetchAllProductsAsync,
   fetchProductsbyfilterAsync,
-  fetchProductsbysortAsync,
   selectAllProducts,
 } from "../productSlice";
 import { Fragment, useEffect, useState } from "react";
@@ -844,35 +843,172 @@ function classNames(...classes) {
 
 export function ProductList() {
   const dispatch = useDispatch();
-  const products = useSelector(selectAllProducts);
+  // const products = useSelector(selectAllProducts);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filter, setFilter] = useState({});
+  const [sort, setSort] = useState({});
 
   function handleFilter(e, section, option) {
+    //TODO : on server it will support multiple categories
+    console.log(e.target.checked);
     console.log(section.id, option.value);
     // agar varibale humara key ha toh usko square bracket rakhte ha
-    const newFilter = { ...filter, [section.id]: option.value };
+    var newFilter = { ...filter };
+    // if (e.target.checked) {
+    //   newFilter[section.id] = option.value;
+    // } else {
+    //   delete newFilter[section.id];
+    // }
+
+    if (e.target.checked) {
+      if (newFilter[section.id]) {
+        newFilter[section.id].push(option.value);
+      } else {
+        newFilter[section.id] = [option.value];
+      }
+    } else {
+      const index = newFilter[section.id].findIndex(
+        (el) => el === option.value
+      );
+      console.log(index);
+      newFilter[section.id].splice(index, 1);
+    }
     setFilter(newFilter);
-    dispatch(fetchProductsbyfilterAsync(newFilter));
+    // idhar se dispatch ki jarurt nhi direct useeffect se bas isko he dispatch krteha
+    // all product ke liye alag se dispatch krne karurt nhi ha kyuki koi filter nhi laga hoga toh
+    //  wo all products he deaga isliye bas filter wala he dispatch kr skte ha action
+    // dispatch(fetchProductsbyfilterAsync(newFilter));
   }
 
   function handleSort(e, option) {
     console.log(option);
-    const newFilter = { ...filter, _sort: option.sort, _order: option.order };
-    setFilter(newFilter);
-    dispatch(fetchProductsbysortAsync(newFilter));
+    const Sorting = { _sort: option.sort, _order: option.order };
+    setSort(Sorting);
   }
   useEffect(() => {
-    dispatch(fetchAllProductsAsync());
-  }, [dispatch]);
+    // dispatch(fetchAllProductsAsync());
+    dispatch(fetchProductsbyfilterAsync({ filter, sort }));
+  }, [dispatch, filter, sort]);
 
   return (
     <div>
       <div>
+        {/* Mobile filter dialog */}
+        <Transition.Root show={mobileFiltersOpen} as={Fragment}>
+          <Dialog
+            as="div"
+            className="relative z-40 lg:hidden"
+            onClose={setMobileFiltersOpen}
+          >
+            <Transition.Child
+              as={Fragment}
+              enter="transition-opacity ease-linear duration-300"
+              enterFrom="opacity-0"
+              enterTo="opacity-100"
+              leave="transition-opacity ease-linear duration-300"
+              leaveFrom="opacity-100"
+              leaveTo="opacity-0"
+            >
+              <div className="fixed inset-0 bg-black bg-opacity-25" />
+            </Transition.Child>
+
+            <div className="fixed inset-0 z-40 flex">
+              <Transition.Child
+                as={Fragment}
+                enter="transition ease-in-out duration-300 transform"
+                enterFrom="translate-x-full"
+                enterTo="translate-x-0"
+                leave="transition ease-in-out duration-300 transform"
+                leaveFrom="translate-x-0"
+                leaveTo="translate-x-full"
+              >
+                <Dialog.Panel className="relative ml-auto flex h-full w-full max-w-xs flex-col overflow-y-auto bg-white py-4 pb-12 shadow-xl">
+                  <div className="flex items-center justify-between px-4">
+                    <h2 className="text-lg font-medium text-gray-900">
+                      Filters
+                    </h2>
+                    <button
+                      type="button"
+                      className="-mr-2 flex h-10 w-10 items-center justify-center rounded-md bg-white p-2 text-gray-400"
+                      onClick={() => setMobileFiltersOpen(false)}
+                    >
+                      <span className="sr-only">Close menu</span>
+                      <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                    </button>
+                  </div>
+
+                  {/* Filters */}
+                  <form className="mt-4 border-t border-gray-200">
+                    <h3 className="sr-only">Categories</h3>
+
+                    {filters.map((section) => (
+                      <Disclosure
+                        as="div"
+                        key={section.id}
+                        className="border-t border-gray-200 px-4 py-6"
+                      >
+                        {({ open }) => (
+                          <>
+                            <h3 className="-mx-2 -my-3 flow-root">
+                              <Disclosure.Button className="flex w-full items-center justify-between bg-white px-2 py-3 text-gray-400 hover:text-gray-500">
+                                <span className="font-medium text-gray-900">
+                                  {section.name}
+                                </span>
+                                <span className="ml-6 flex items-center">
+                                  {open ? (
+                                    <MinusIcon
+                                      className="h-5 w-5"
+                                      aria-hidden="true"
+                                    />
+                                  ) : (
+                                    <PlusIcon
+                                      className="h-5 w-5"
+                                      aria-hidden="true"
+                                    />
+                                  )}
+                                </span>
+                              </Disclosure.Button>
+                            </h3>
+                            <Disclosure.Panel className="pt-6">
+                              <div className="space-y-6">
+                                {section.options.map((option, optionIdx) => (
+                                  <div
+                                    key={option.value}
+                                    className="flex items-center"
+                                  >
+                                    <input
+                                      id={`filter-mobile-${section.id}-${optionIdx}`}
+                                      name={`${section.id}[]`}
+                                      defaultValue={option.value}
+                                      type="checkbox"
+                                      defaultChecked={option.checked}
+                                      onChange={(e) =>
+                                        handleFilter(e, section, option)
+                                      }
+                                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <label
+                                      htmlFor={`filter-mobile-${section.id}-${optionIdx}`}
+                                      className="ml-3 min-w-0 flex-1 text-gray-500"
+                                    >
+                                      {option.label}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </Disclosure.Panel>
+                          </>
+                        )}
+                      </Disclosure>
+                    ))}
+                  </form>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </Dialog>
+        </Transition.Root>
         <div className="bg-white">
           <div>
-            {/* Mobile Filter */}
-            <MobileFilter></MobileFilter>
             <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 -py-10">
               <div className="flex items-baseline justify-between border-b border-gray-200 pb-6 pt-24">
                 <h1 className="text-4xl font-bold tracking-tight text-gray-900">
@@ -969,147 +1105,51 @@ export function ProductList() {
   );
 }
 
-function MobileFilter() {
-  const dispatch = useDispatch();
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [filter, setFilter] = useState({});
-
-  function handleFilter(e, section, option) {
-    console.log(section.id, option.value);
-    // agar varibale humara key ha toh usko square bracket rakhte ha
-    const newFilter = { ...filter, [section.id]: option.value };
-    setFilter(newFilter);
-    dispatch(fetchProductsbyfilterAsync(newFilter));
-  }
-  return (
-    <div>
-      {/* Mobile filter dialog */}
-      <Transition.Root show={mobileFiltersOpen} as={Fragment}>
-        <Dialog
-          as="div"
-          className="relative z-40 lg:hidden"
-          onClose={setMobileFiltersOpen}
-        >
-          <Transition.Child
-            as={Fragment}
-            enter="transition-opacity ease-linear duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="transition-opacity ease-linear duration-300"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-black bg-opacity-25" />
-          </Transition.Child>
-
-          <div className="fixed inset-0 z-40 flex">
-            <Transition.Child
-              as={Fragment}
-              enter="transition ease-in-out duration-300 transform"
-              enterFrom="translate-x-full"
-              enterTo="translate-x-0"
-              leave="transition ease-in-out duration-300 transform"
-              leaveFrom="translate-x-0"
-              leaveTo="translate-x-full"
-            >
-              <Dialog.Panel className="relative ml-auto flex h-full w-full max-w-xs flex-col overflow-y-auto bg-white py-4 pb-12 shadow-xl">
-                <div className="flex items-center justify-between px-4">
-                  <h2 className="text-lg font-medium text-gray-900">Filters</h2>
-                  <button
-                    type="button"
-                    className="-mr-2 flex h-10 w-10 items-center justify-center rounded-md bg-white p-2 text-gray-400"
-                    onClick={() => setMobileFiltersOpen(false)}
-                  >
-                    <span className="sr-only">Close menu</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                  </button>
-                </div>
-
-                {/* Filters */}
-                <form className="mt-4 border-t border-gray-200">
-                  <h3 className="sr-only">Categories</h3>
-
-                  {filters.map((section) => (
-                    <Disclosure
-                      as="div"
-                      key={section.id}
-                      className="border-t border-gray-200 px-4 py-6"
-                    >
-                      {({ open }) => (
-                        <>
-                          <h3 className="-mx-2 -my-3 flow-root">
-                            <Disclosure.Button className="flex w-full items-center justify-between bg-white px-2 py-3 text-gray-400 hover:text-gray-500">
-                              <span className="font-medium text-gray-900">
-                                {section.name}
-                              </span>
-                              <span className="ml-6 flex items-center">
-                                {open ? (
-                                  <MinusIcon
-                                    className="h-5 w-5"
-                                    aria-hidden="true"
-                                  />
-                                ) : (
-                                  <PlusIcon
-                                    className="h-5 w-5"
-                                    aria-hidden="true"
-                                  />
-                                )}
-                              </span>
-                            </Disclosure.Button>
-                          </h3>
-                          <Disclosure.Panel className="pt-6">
-                            <div className="space-y-6">
-                              {section.options.map((option, optionIdx) => (
-                                <div
-                                  key={option.value}
-                                  className="flex items-center"
-                                >
-                                  <input
-                                    id={`filter-mobile-${section.id}-${optionIdx}`}
-                                    name={`${section.id}[]`}
-                                    defaultValue={option.value}
-                                    type="checkbox"
-                                    defaultChecked={option.checked}
-                                    onChange={(e) =>
-                                      handleFilter(e, section, option)
-                                    }
-                                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                  />
-                                  <label
-                                    htmlFor={`filter-mobile-${section.id}-${optionIdx}`}
-                                    className="ml-3 min-w-0 flex-1 text-gray-500"
-                                  >
-                                    {option.label}
-                                  </label>
-                                </div>
-                              ))}
-                            </div>
-                          </Disclosure.Panel>
-                        </>
-                      )}
-                    </Disclosure>
-                  ))}
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </Dialog>
-      </Transition.Root>
-    </div>
-  );
-}
-
-function DesktopFilter() {
+function DesktopFilter(handleFilter, handleSort) {
   const dispatch = useDispatch();
   const [filter, setFilter] = useState({});
-
+  const [sort, setSort] = useState({});
   function handleFilter(e, section, option) {
+    //TODO : on server it will support multiple categories
+    console.log(e.target.checked);
     console.log(section.id, option.value);
     // agar varibale humara key ha toh usko square bracket rakhte ha
-    const newFilter = { ...filter, [section.id]: option.value };
+    var newFilter = { ...filter };
+    // if (e.target.checked) {
+    //   newFilter[section.id] = option.value;
+    // } else {
+    //   delete newFilter[section.id];
+    // }
+
+    if (e.target.checked) {
+      if (newFilter[section.id]) {
+        newFilter[section.id].push(option.value);
+      } else {
+        newFilter[section.id] = [option.value];
+      }
+    } else {
+      const index = newFilter[section.id].findIndex(
+        (el) => el === option.value
+      );
+      console.log(index);
+      newFilter[section.id].splice(index, 1);
+    }
     setFilter(newFilter);
-    dispatch(fetchProductsbyfilterAsync(newFilter));
+    // idhar se dispatch ki jarurt nhi direct useeffect se bas isko he dispatch krteha
+    // all product ke liye alag se dispatch krne karurt nhi ha kyuki koi filter nhi laga hoga toh
+    //  wo all products he deaga isliye bas filter wala he dispatch kr skte ha action
+    // dispatch(fetchProductsbyfilterAsync(newFilter));
   }
+
+  function handleSort(e, option) {
+    console.log(option);
+    const Sorting = { _sort: option.sort, _order: option.order };
+    setSort(Sorting);
+  }
+  useEffect(() => {
+    // dispatch(fetchAllProductsAsync());
+    dispatch(fetchProductsbyfilterAsync({ filter, sort }));
+  }, [dispatch, filter, sort]);
 
   return (
     <div>

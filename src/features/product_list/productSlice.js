@@ -1,28 +1,18 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import {
-  fetchAllProducts,
-  fetchProductsbyfilter,
-  fetchProductsbysorting,
-} from "./productApi";
+import { fetchAllProducts, fetchProductsbyfilter } from "./productApi";
 
 export const fetchAllProductsAsync = createAsyncThunk("products", async () => {
   const response = await fetchAllProducts();
   return response.data;
 });
 export const fetchProductsbyfilterAsync = createAsyncThunk(
-  "productsbyfilter",
-  async (filter) => {
-    const response = await fetchProductsbyfilter(filter);
+  "product/fetchProductsByFilter",
+  async ({ filter, sort }) => {
+    const response = await fetchProductsbyfilter(filter, sort);
     return response.data;
   }
 );
-export const fetchProductsbysortAsync = createAsyncThunk(
-  "productsbysort",
-  async (sorts) => {
-    const response = await fetchProductsbysorting(sorts);
-    return response.data;
-  }
-);
+
 // 'products is a typeprefix or "action type prefix'
 export const productSlice = createSlice({
   name: "product",
@@ -49,13 +39,6 @@ export const productSlice = createSlice({
         state.status = "loading";
       })
       .addCase(fetchProductsbyfilterAsync.fulfilled, (state, action) => {
-        state.status = "idle";
-        state.products = action.payload;
-      })
-      .addCase(fetchProductsbysortAsync.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(fetchProductsbysortAsync.fulfilled, (state, action) => {
         state.status = "idle";
         state.products = action.payload;
       });
